@@ -75,27 +75,32 @@ public class PersonalTaskManagerViolations {
 
 
         // Tải dữ liệu
-        JSONArray tasks = loadTasksFromDb();
+        List<Task> tasks = loadTaskListFromDb();
 
         // Kiểm tra trùng lặp
-        for (Object obj : tasks) {
-            JSONObject existingTask = (JSONObject) obj;
-            if (existingTask.get("title").toString().equalsIgnoreCase(title) &&
-                existingTask.get("due_date").toString().equals(dueDate.format(DATE_FORMATTER))) {
-                System.out.println(String.format("Lỗi: Nhiệm vụ '%s' đã tồn tại với cùng ngày đến hạn.", title));
+        for (Task task : tasks) {
+            if (task.getTitle().equalsIgnoreCase(title)
+                && task.getDueDate().format(DATE_FORMATTER).equals(dueDate.format(DATE_FORMATTER))) {
+                System.out.printf("Lỗi: Nhiệm vụ '%s' đã tồn tại với cùng ngày đến hạn.\n", title);
                 return null;
             }
         }
 
         String taskId = UUID.randomUUID().toString(); // YAGNI: Có thể dùng số nguyên tăng dần đơn giản hơn.
 
+        //
         Task newTask = new Task(title, description, dueDate, PriorityLevel.fromString(priorityLevel));
-        tasks.add(newTask.toJson());
+        tasks.add(newTask);
 
+        // Ghi file: chuyển toàn bộ danh sách Task → JSONArray để lưu
+        JSONArray jsonArray = new JSONArray();
+        for (Task t : tasks) {
+            jsonArray.add(t.toJson());
+        }
         // Lưu dữ liệu
-        saveTasksToDb(tasks);
+        saveTasksToDb(jsonArray);
 
-        System.out.println(String.format("Đã thêm nhiệm vụ mới thành công với ID: %s", taskId));
+        System.out.println("Đã thêm nhiệm vụ mới thành công với ID: " + newTask.getId());
         return newTask;
     }
 
@@ -115,6 +120,43 @@ public class PersonalTaskManagerViolations {
 
     private boolean isPriorityValid(String priorityLevel) {
         return PriorityLevel.isValid(priorityLevel);
+    }
+
+    private List<Task> loadTaskListFromDb() {
+        List<Task> taskList = new ArrayList<>();
+        JSONParser parser = new JSONParser();
+
+        try (FileReader reader = new FileReader(DB_FILE_PATH)) {
+            Object obj = parser.parse(reader);
+            if (obj instanceof JSONArray) {
+                JSONArray array = (JSONArray) obj;
+                for (Object o : array) {
+                    JSONObject json = (JSONObject) o;
+                    Task task = parseTaskFromJson(json);
+                    if (task != null) {
+                        taskList.add(task);
+                    }
+                }
+            }
+        } catch (IOException | ParseException e) {
+            System.err.println("Lỗi khi đọc file: " + e.getMessage());
+        }
+        return taskList;
+    }
+
+    //
+    private Task parseTaskFromJson(JSONObject json) {
+        try {
+            String title = json.get("title").toString();
+            String description = json.get("description").toString();
+            LocalDate dueDate = LocalDate.parse(json.get("due_date").toString(), DATE_FORMATTER);
+            PriorityLevel priority = PriorityLevel.fromString(json.get("priority").toString());
+
+            Task task = new Task(title, description, dueDate, priority);
+            return task;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public static void main(String[] args) {
