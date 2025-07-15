@@ -13,6 +13,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import refactor.PriorityLevel;
 
 public class PersonalTaskManagerViolations {
 
@@ -56,26 +57,21 @@ public class PersonalTaskManagerViolations {
     public JSONObject addNewTaskWithViolations(String title, String description,
                                                 String dueDateStr, String priorityLevel,
                                                 boolean isRecurring) {
-
-        if (title == null || title.trim().isEmpty()) {
+        //
+        if (!isTitleValid(title)) {
             System.out.println("Lỗi: Tiêu đề không được để trống.");
             return null;
         }
-        if (dueDateStr == null || dueDateStr.trim().isEmpty()) {
-            System.out.println("Lỗi: Ngày đến hạn không được để trống.");
-            return null;
-        }
-        LocalDate dueDate;
-        try {
-            dueDate = LocalDate.parse(dueDateStr, DATE_FORMATTER);
-        } catch (DateTimeParseException e) {
+        if (dueDateStr == null || !isDueDateValid(dueDateStr)) {
             System.out.println("Lỗi: Ngày đến hạn không hợp lệ. Vui lòng sử dụng định dạng YYYY-MM-DD.");
             return null;
         }
-        if (!PriorityLevel.isValid(priorityLevel)) {
+        if (!isPriorityValid(priorityLevel)) {
             System.out.println("Lỗi: Mức độ ưu tiên không hợp lệ. Vui lòng chọn từ: Thấp, Trung bình, Cao.");
             return null;
         }
+        LocalDate dueDate = LocalDate.parse(dueDateStr, DATE_FORMATTER);
+
 
         // Tải dữ liệu
         JSONArray tasks = loadTasksFromDb();
@@ -114,6 +110,24 @@ public class PersonalTaskManagerViolations {
 
         System.out.println(String.format("Đã thêm nhiệm vụ mới thành công với ID: %s", taskId));
         return newTask;
+    }
+
+    //
+    private boolean isTitleValid(String title) {
+        return title != null && !title.trim().isEmpty();
+    }
+
+    private boolean isDueDateValid(String dueDateStr) {
+        try {
+            LocalDate.parse(dueDateStr, DATE_FORMATTER);
+            return true;
+        } catch (DateTimeParseException e) {
+            return false;
+        }
+    }
+
+    private boolean isPriorityValid(String priorityLevel) {
+        return PriorityLevel.isValid(priorityLevel);
     }
 
     public static void main(String[] args) {
@@ -155,3 +169,5 @@ public class PersonalTaskManagerViolations {
         );
     }
 }
+
+
