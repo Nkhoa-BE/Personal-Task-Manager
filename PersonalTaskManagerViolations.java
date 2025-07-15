@@ -54,7 +54,7 @@ public class PersonalTaskManagerViolations {
      * @param isRecurring Boolean có phải là nhiệm vụ lặp lại không.
      * @return JSONObject của nhiệm vụ đã thêm, hoặc null nếu có lỗi.
      */
-    public JSONObject addNewTaskWithViolations(String title, String description,
+    public Task addNewTaskWithViolations(String title, String description,
                                                 String dueDateStr, String priorityLevel
                                                 ) {
         //
@@ -89,17 +89,8 @@ public class PersonalTaskManagerViolations {
 
         String taskId = UUID.randomUUID().toString(); // YAGNI: Có thể dùng số nguyên tăng dần đơn giản hơn.
 
-        JSONObject newTask = new JSONObject();
-        newTask.put("id", taskId);
-        newTask.put("title", title);
-        newTask.put("description", description);
-        newTask.put("due_date", dueDate.format(DATE_FORMATTER));
-        newTask.put("priority", priorityLevel);
-        newTask.put("status", "Chưa hoàn thành");
-        newTask.put("created_at", LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
-        newTask.put("last_updated_at", LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
-
-        tasks.add(newTask);
+        Task newTask = new Task(title, description, dueDate, PriorityLevel.fromString(priorityLevel));
+        tasks.add(newTask.toJson());
 
         // Lưu dữ liệu
         saveTasksToDb(tasks);
