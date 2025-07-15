@@ -1,49 +1,11 @@
 package refactor;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
-import refactor.PriorityLevel;
+
 
 public class PersonalTaskManagerViolations {
 
-    private static final String DB_FILE_PATH = "tasks_database.json";
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
-    // Phương thức trợ giúp để tải dữ liệu (sẽ được gọi lặp lại)
-    private static JSONArray loadTasksFromDb() {
-        JSONParser parser = new JSONParser();
-        try (FileReader reader = new FileReader(DB_FILE_PATH)) {
-            Object obj = parser.parse(reader);
-            if (obj instanceof JSONArray) {
-                return (JSONArray) obj;
-            }
-        } catch (IOException | ParseException e) {
-            System.err.println("Lỗi khi đọc file database: " + e.getMessage());
-        }
-        return new JSONArray();
-    }
-
-    // Phương thức trợ giúp để lưu dữ liệu
-    private static void saveTasksToDb(JSONArray tasksData) {
-        try (FileWriter file = new FileWriter(DB_FILE_PATH)) {
-            file.write(tasksData.toJSONString());
-            file.flush();
-        } catch (IOException e) {
-            System.err.println("Lỗi khi ghi vào file database: " + e.getMessage());
-        }
-    }
-
+    private final TaskRepository repo = new TaskRepository();
     /**
      * Chức năng thêm nhiệm vụ mới
      *
@@ -73,73 +35,25 @@ public class PersonalTaskManagerViolations {
 
         LocalDate dueDate = Validator.parseDate(dueDateStr);
 
-
-
         // Tải dữ liệu
-        List<Task> tasks = loadTaskListFromDb();
+        List<Task> tasks = repo.loadAllTasks();
 
         // Kiểm tra trùng lặp
         for (Task task : tasks) {
             if (task.getTitle().equalsIgnoreCase(title)
-                && task.getDueDate().format(DATE_FORMATTER).equals(dueDate.format(DATE_FORMATTER))) {
+                && task.getDueDate().equals(dueDate)) {
                 System.out.printf("Lỗi: Nhiệm vụ '%s' đã tồn tại với cùng ngày đến hạn.\n", title);
                 return null;
             }
         }
 
-        String taskId = UUID.randomUUID().toString(); // YAGNI: Có thể dùng số nguyên tăng dần đơn giản hơn.
-
-        //
         Task newTask = new Task(title, description, dueDate, PriorityLevel.fromString(priorityLevel));
         tasks.add(newTask);
 
-        // Ghi file: chuyển toàn bộ danh sách Task → JSONArray để lưu
-        JSONArray jsonArray = new JSONArray();
-        for (Task t : tasks) {
-            jsonArray.add(t.toJson());
-        }
-        // Lưu dữ liệu
-        saveTasksToDb(jsonArray);
+        repo.saveAllTasks(tasks);
 
         System.out.println("Đã thêm nhiệm vụ mới thành công với ID: " + newTask.getId());
         return newTask;
-    }
-
-    private List<Task> loadTaskListFromDb() {
-        List<Task> taskList = new ArrayList<>();
-        JSONParser parser = new JSONParser();
-
-        try (FileReader reader = new FileReader(DB_FILE_PATH)) {
-            Object obj = parser.parse(reader);
-            if (obj instanceof JSONArray) {
-                JSONArray array = (JSONArray) obj;
-                for (Object o : array) {
-                    JSONObject json = (JSONObject) o;
-                    Task task = parseTaskFromJson(json);
-                    if (task != null) {
-                        taskList.add(task);
-                    }
-                }
-            }
-        } catch (IOException | ParseException e) {
-            System.err.println("Lỗi khi đọc file: " + e.getMessage());
-        }
-        return taskList;
-    }
-
-    //
-    private Task parseTaskFromJson(JSONObject json) {
-        try {
-            String title = json.get("title").toString();
-            String description = json.get("description").toString();
-            LocalDate dueDate = LocalDate.parse(json.get("due_date").toString(), DATE_FORMATTER);
-            PriorityLevel priority = PriorityLevel.fromString(json.get("priority").toString());
-
-            Task task = new Task(title, description, dueDate, priority);
-            return task;
-        } catch (Exception e) {
-            return null;
-        }
     }
 
     public static void main(String[] args) {
