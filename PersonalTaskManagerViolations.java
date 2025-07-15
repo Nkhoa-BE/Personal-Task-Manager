@@ -58,20 +58,21 @@ public class PersonalTaskManagerViolations {
                                                 String dueDateStr, String priorityLevel
                                                 ) {
         //
-        if (!isTitleValid(title)) {
+        if (!Validator.isTitleValid(title)) {
             System.out.println("Lỗi: Tiêu đề không được để trống.");
             return null;
         }
-        if (dueDateStr == null || !isDueDateValid(dueDateStr)) {
+        if (!Validator.isDueDateValid(dueDateStr)) {
             System.out.println("Lỗi: Ngày đến hạn không hợp lệ. Vui lòng sử dụng định dạng YYYY-MM-DD.");
             return null;
         }
-        //
-        if (!isPriorityValid(priorityLevel)) {
+        if (!Validator.isPriorityValid(priorityLevel)) {
             System.out.println("Lỗi: Mức độ ưu tiên không hợp lệ. Vui lòng chọn từ: Thấp, Trung bình, Cao.");
             return null;
         }
-        LocalDate dueDate = LocalDate.parse(dueDateStr, DATE_FORMATTER);
+
+        LocalDate dueDate = Validator.parseDate(dueDateStr);
+
 
 
         // Tải dữ liệu
@@ -102,24 +103,6 @@ public class PersonalTaskManagerViolations {
 
         System.out.println("Đã thêm nhiệm vụ mới thành công với ID: " + newTask.getId());
         return newTask;
-    }
-
-    //
-    private boolean isTitleValid(String title) {
-        return title != null && !title.trim().isEmpty();
-    }
-
-    private boolean isDueDateValid(String dueDateStr) {
-        try {
-            LocalDate.parse(dueDateStr, DATE_FORMATTER);
-            return true;
-        } catch (DateTimeParseException e) {
-            return false;
-        }
-    }
-
-    private boolean isPriorityValid(String priorityLevel) {
-        return PriorityLevel.isValid(priorityLevel);
     }
 
     private List<Task> loadTaskListFromDb() {
